@@ -1,44 +1,70 @@
-# RAG-Based Mini Q&A System
+# 📄 RAG-Based Mini Q&A System
 
-A lightweight **Retrieval-Augmented Generation** system that answers questions strictly from a provided document — no hallucinations.
-
-**Stack:** LangChain · OpenAI · FAISS · Python
+A lightweight **Retrieval-Augmented Generation (RAG)** system that answers user questions strictly based on a provided document — **no hallucinations**.
 
 ---
 
-## Architecture
+## 🚀 Tech Stack
+
+* **LangChain** – RAG pipeline orchestration
+* **Ollama (Local Models)**
+
+  * `nomic-embed-text` → embeddings
+  * `tinyllama` → LLM
+* **FAISS** – vector database
+* **Streamlit** – user interface
+* **Python**
+
+---
+
+## 🧠 Architecture
 
 ```
 Document (.txt / .pdf)
         │
-        ▼  LangChain TextLoader / PyMuPDFLoader
-┌────────────────────────────────┐
-│  RecursiveCharacterTextSplitter │  ~1500 chars/chunk, 200 overlap
-└───────────────┬────────────────┘
-                │
-                ▼  OpenAI text-embedding-3-small
-┌────────────────────────────────┐
-│      OpenAI Embeddings          │  1536-dim vectors
-└───────────────┬────────────────┘
-                │
-                ▼
-┌────────────────────────────────┐
-│       FAISS Vector Store        │  cosine similarity search
-└───────────────┬────────────────┘
-                │  User Query (embedded on-the-fly)
-                ▼  top-3 chunks retrieved
-┌────────────────────────────────┐
-│   LangChain RetrievalQA Chain   │
-│   + Custom PromptTemplate       │  "Answer ONLY from context"
-└───────────────┬────────────────┘
-                │
-                ▼  OpenAI gpt-3.5-turbo
-           Final Answer
+        ▼
+TextLoader / PyMuPDFLoader
+        │
+        ▼
+RecursiveCharacterTextSplitter
+(500 chars, 100 overlap)
+        │
+        ▼
+Ollama Embeddings (nomic-embed-text)
+        │
+        ▼
+FAISS Vector Store
+        │
+        ▼
+User Query
+        │
+        ▼
+Top-3 Relevant Chunks Retrieved
+        │
+        ▼
+Ollama LLM (tinyllama)
++ PromptTemplate (No hallucination)
+        │
+        ▼
+Final Answer
 ```
 
 ---
 
-## Quick Start
+## ✨ Features
+
+* 📂 Upload **TXT / PDF documents**
+* 🔍 Semantic search using embeddings
+* 📊 Retrieves **top-3 relevant chunks**
+* 🤖 Answers generated using LLM
+* 🚫 Strict **context-only answering (no hallucination)**
+* ⚡ Local execution (no API cost)
+* 🧠 Summarization support for general queries
+* 🔎 Optional: View retrieved chunks (debug mode)
+
+---
+
+## ⚙️ Setup Instructions
 
 ### 1. Install dependencies
 
@@ -46,117 +72,131 @@ Document (.txt / .pdf)
 pip install -r requirements.txt
 ```
 
-For PDF support:
-```bash
-pip install pymupdf
-```
+---
 
-### 2. Set your OpenAI API key
+### 2. Install Ollama
 
-```bash
-export OPENAI_API_KEY="sk-..."
-```
+Download and install from:
+👉 https://ollama.com
 
-Or pass it directly with `--api-key sk-...`
+---
 
-### 3. Run interactive Q&A
+### 3. Pull required models
 
 ```bash
-python rag_app.py data/company_policy.txt
-```
-
-### 4. Single query (non-interactive)
-
-```bash
-python rag_app.py data/company_policy.txt --query "How many leave days?"
-```
-
-### 5. Run batch test queries
-
-```bash
-python test_queries.py
+ollama pull tinyllama
+ollama pull nomic-embed-text
 ```
 
 ---
 
-## CLI Reference
+### 4. Run the application
 
-```
-python rag_app.py <document> [options]
-
-Positional:
-  document              Path to .txt or .pdf file
-
-Options:
-  --api-key    STR      OpenAI API key (or set OPENAI_API_KEY env var)
-  --model      STR      OpenAI model (default: gpt-3.5-turbo)
-  --chunk-size INT      Characters per chunk (default: 1500 ≈ 300 words)
-  --overlap    INT      Overlap chars between chunks (default: 200)
-  --top-k      INT      Number of chunks to retrieve (default: 3)
-  --query      STR      Run a single query then exit
-  --verbose             Show retrieved source chunks with each answer
-  --no-cache            Rebuild FAISS index even if cached
+```bash
+streamlit run app.py
 ```
 
 ---
 
-## Sample Document
+## 🧪 Usage
 
-`data/company_policy.txt` — ACME Corporation Employee Policy Handbook
-
-| Section | Topic |
-|---------|-------|
-| 1 | Leave Policy (annual, sick, maternity, emergency) |
-| 2 | Work Hours & Remote Work |
-| 3 | Code of Conduct |
-| 4 | Compensation & Benefits |
-| 5 | Performance & Appraisal |
-| 6 | Grievance & Disciplinary Process |
-| 7 | IT & Data Security |
-
-### Sample queries & expected answers
-
-| Query | Expected Answer |
-|-------|----------------|
-| How many paid leave days per year? | 20 days annually |
-| What is the weekend overtime rate? | 2× hourly rate |
-| How many WFH days are allowed? | Up to 2 days per week |
-| When are salaries credited? | Last working day of each month |
-| What is the password expiry period? | Every 90 days |
+1. Upload a `.txt` or `.pdf` document
+2. Ask questions related to the document
+3. Get answers strictly based on document content
 
 ---
 
-## Project Structure
+## 💬 Example
+
+**Document Content:**
+
+```
+Employees are allowed 20 days of paid leave annually.
+```
+
+**User Query:**
+
+```
+How many leaves are allowed?
+```
+
+**Output:**
+
+```
+Employees are allowed 20 days of paid leave annually.
+```
+
+---
+
+## 📁 Project Structure
 
 ```
 rag_qa/
-├── rag_app.py              # Full RAG pipeline + CLI (LangChain + OpenAI)
-├── test_queries.py         # Batch test runner
+├── app.py              # Streamlit UI
+├── rag_app.py          # Core RAG pipeline
 ├── requirements.txt
 ├── README.md
 └── data/
-    └── company_policy.txt  # Sample HR policy document
+    └── company_policy.txt
 ```
 
 ---
 
-## How LangChain Is Used
+## 🧠 How It Works
 
-| LangChain Component | Role |
-|---|---|
-| `TextLoader` / `PyMuPDFLoader` | Step 1: Load document |
-| `RecursiveCharacterTextSplitter` | Step 2: Smart chunking |
-| `OpenAIEmbeddings` | Step 3: Generate embeddings |
-| `FAISS` (via langchain-community) | Step 4: Vector store |
-| `RetrievalQA` chain | Steps 5+6: Retrieve + generate |
-| `PromptTemplate` | Enforce document-only answers |
-
----
-
-## Caching
-
-On the first run, the FAISS index is saved to `.rag_cache_<docname>/`. Subsequent runs restore it instantly — no re-embedding needed. Use `--no-cache` to force a rebuild.
+| Step | Component  | Description                  |
+| ---- | ---------- | ---------------------------- |
+| 1    | Loader     | Load TXT/PDF document        |
+| 2    | Splitter   | Split into chunks            |
+| 3    | Embeddings | Convert text → vectors       |
+| 4    | FAISS      | Store embeddings             |
+| 5    | Retriever  | Get top-k relevant chunks    |
+| 6    | LLM        | Generate answer from context |
 
 ---
 
-*Built with Python · LangChain · OpenAI · FAISS*
+## ⚡ Caching
+
+* FAISS index is stored locally as `.rag_cache_*`
+* Avoids recomputation of embeddings
+* Speeds up repeated queries
+
+---
+
+## 📝 Note
+
+This project uses **Ollama (local models)** instead of OpenAI:
+
+* No API key required
+* Runs completely offline
+* Cost-free
+* Comparable to Sentence Transformers
+
+---
+
+## 🎯 Key Highlights
+
+* Fully local RAG pipeline
+* No hallucination via strict prompt control
+* Clean modular architecture
+* Streamlit-based UI for easy interaction
+
+---
+
+## 🚀 Future Improvements
+
+* Chat history (memory)
+* Hybrid search (BM25 + vector)
+* Deployment (Streamlit Cloud)
+* Evaluation using RAGAS
+
+---
+
+## 👨‍💻 Author
+
+Mohd Majid
+AI/ML Enthusiast
+
+---
+
+⭐ If you like this project, consider giving it a star!
