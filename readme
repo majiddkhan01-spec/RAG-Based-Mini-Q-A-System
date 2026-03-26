@@ -1,0 +1,162 @@
+# RAG-Based Mini Q&A System
+
+A lightweight **Retrieval-Augmented Generation** system that answers questions strictly from a provided document — no hallucinations.
+
+**Stack:** LangChain · OpenAI · FAISS · Python
+
+---
+
+## Architecture
+
+```
+Document (.txt / .pdf)
+        │
+        ▼  LangChain TextLoader / PyMuPDFLoader
+┌────────────────────────────────┐
+│  RecursiveCharacterTextSplitter │  ~1500 chars/chunk, 200 overlap
+└───────────────┬────────────────┘
+                │
+                ▼  OpenAI text-embedding-3-small
+┌────────────────────────────────┐
+│      OpenAI Embeddings          │  1536-dim vectors
+└───────────────┬────────────────┘
+                │
+                ▼
+┌────────────────────────────────┐
+│       FAISS Vector Store        │  cosine similarity search
+└───────────────┬────────────────┘
+                │  User Query (embedded on-the-fly)
+                ▼  top-3 chunks retrieved
+┌────────────────────────────────┐
+│   LangChain RetrievalQA Chain   │
+│   + Custom PromptTemplate       │  "Answer ONLY from context"
+└───────────────┬────────────────┘
+                │
+                ▼  OpenAI gpt-3.5-turbo
+           Final Answer
+```
+
+---
+
+## Quick Start
+
+### 1. Install dependencies
+
+```bash
+pip install -r requirements.txt
+```
+
+For PDF support:
+```bash
+pip install pymupdf
+```
+
+### 2. Set your OpenAI API key
+
+```bash
+export OPENAI_API_KEY="sk-..."
+```
+
+Or pass it directly with `--api-key sk-...`
+
+### 3. Run interactive Q&A
+
+```bash
+python rag_app.py data/company_policy.txt
+```
+
+### 4. Single query (non-interactive)
+
+```bash
+python rag_app.py data/company_policy.txt --query "How many leave days?"
+```
+
+### 5. Run batch test queries
+
+```bash
+python test_queries.py
+```
+
+---
+
+## CLI Reference
+
+```
+python rag_app.py <document> [options]
+
+Positional:
+  document              Path to .txt or .pdf file
+
+Options:
+  --api-key    STR      OpenAI API key (or set OPENAI_API_KEY env var)
+  --model      STR      OpenAI model (default: gpt-3.5-turbo)
+  --chunk-size INT      Characters per chunk (default: 1500 ≈ 300 words)
+  --overlap    INT      Overlap chars between chunks (default: 200)
+  --top-k      INT      Number of chunks to retrieve (default: 3)
+  --query      STR      Run a single query then exit
+  --verbose             Show retrieved source chunks with each answer
+  --no-cache            Rebuild FAISS index even if cached
+```
+
+---
+
+## Sample Document
+
+`data/company_policy.txt` — ACME Corporation Employee Policy Handbook
+
+| Section | Topic |
+|---------|-------|
+| 1 | Leave Policy (annual, sick, maternity, emergency) |
+| 2 | Work Hours & Remote Work |
+| 3 | Code of Conduct |
+| 4 | Compensation & Benefits |
+| 5 | Performance & Appraisal |
+| 6 | Grievance & Disciplinary Process |
+| 7 | IT & Data Security |
+
+### Sample queries & expected answers
+
+| Query | Expected Answer |
+|-------|----------------|
+| How many paid leave days per year? | 20 days annually |
+| What is the weekend overtime rate? | 2× hourly rate |
+| How many WFH days are allowed? | Up to 2 days per week |
+| When are salaries credited? | Last working day of each month |
+| What is the password expiry period? | Every 90 days |
+
+---
+
+## Project Structure
+
+```
+rag_qa/
+├── rag_app.py              # Full RAG pipeline + CLI (LangChain + OpenAI)
+├── test_queries.py         # Batch test runner
+├── requirements.txt
+├── README.md
+└── data/
+    └── company_policy.txt  # Sample HR policy document
+```
+
+---
+
+## How LangChain Is Used
+
+| LangChain Component | Role |
+|---|---|
+| `TextLoader` / `PyMuPDFLoader` | Step 1: Load document |
+| `RecursiveCharacterTextSplitter` | Step 2: Smart chunking |
+| `OpenAIEmbeddings` | Step 3: Generate embeddings |
+| `FAISS` (via langchain-community) | Step 4: Vector store |
+| `RetrievalQA` chain | Steps 5+6: Retrieve + generate |
+| `PromptTemplate` | Enforce document-only answers |
+
+---
+
+## Caching
+
+On the first run, the FAISS index is saved to `.rag_cache_<docname>/`. Subsequent runs restore it instantly — no re-embedding needed. Use `--no-cache` to force a rebuild.
+
+---
+
+*Built with Python · LangChain · OpenAI · FAISS*
